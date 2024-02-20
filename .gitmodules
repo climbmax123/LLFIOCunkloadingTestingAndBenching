@@ -1,0 +1,12 @@
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json.git
+[submodule "lib/quickcpplib"]
+	path = lib/quickcpplib
+	url = https://github.com/ned14/quickcpplib.git
+[submodule "lib/outcome"]
+	path = lib/outcome
+	url = https://github.com/ned14/outcome.git
+[submodule "lib/llfio"]
+	path = lib/llfio
+	url = https://github.com/ned14/llfio.git
