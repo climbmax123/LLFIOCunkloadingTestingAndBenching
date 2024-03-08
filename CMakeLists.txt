@@ -15,15 +15,11 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${llfio_INCLUDE_DIRS})
 include_directories(${OpenSSL_INCLUDE_DIRS})
 
-set(LLFIO_HEADERS_ONLY 1)
+file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "src/*.cpp")
+file(GLOB_RECURSE INCLUDE CONFIGURE_DEPENDS "include/*.h")
 
-file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "include/*.h" "src/*.cpp")
-
-add_executable(VWTChunkloadingTestingAndBenching bench.cpp ${SRC}
-        src/test/data-generator/continuous_data_generator.cpp
-        include/test/data.h
-        include/test/data-generator/continuous_data_generator.h)
+add_executable(VWTChunkloadingTestingAndBenching bench.cpp ${SRC} ${INCLUDE})
 target_include_directories(VWTChunkloadingTestingAndBenching PRIVATE include)
 
-target_link_libraries(VWTChunkloadingTestingAndBenching PUBLIC ${OpenCV_LIBS} ${OpenSSL_LIBS} llfio::hl benchmark::benchmark Threads::Threads)
-target_link_libraries(VWTChunkloadingTestingAndBenching PUBLIC OpenSSL::Crypto OpenSSL::SSL)
+target_link_libraries(VWTChunkloadingTestingAndBenching PUBLIC Threads::Threads benchmark::benchmark ${OpenCV_LIBS} llfio::hl)
+target_link_libraries(VWTChunkloadingTestingAndBenching PUBLIC ${OpenSSL_LIBS} OpenSSL::Crypto OpenSSL::SSL)
