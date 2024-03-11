@@ -1,7 +1,7 @@
 #ifndef VWTCHUNKLOADINGTESTINGANDBENCHING_CHUNKLOADER_FASTCHUNKLOADER_H
 #define VWTCHUNKLOADINGTESTINGANDBENCHING_CHUNKLOADER_FASTCHUNKLOADER_H
 
-#include "chunkloader/chunk_loader.h"
+#include "chunk_loader.h"
 
 #include <vector>
 #include <span>

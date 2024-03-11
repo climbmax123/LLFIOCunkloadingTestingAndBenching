@@ -2,7 +2,8 @@
 
 #include "test/data.h"
 #include "test/data-generator/continuous_data_generator.h"
-#include "chunkloader/fast_chunk_loader.h"
+#include "chunk_loader/fast_chunk_loader.h"
+#include "volume_converter/volume_converter.h"
 
 namespace fs = std::filesystem;
 
@@ -27,10 +28,13 @@ BM_fast_chunk_loader_without_preloading(benchmark::State& state)
 int
 main(int argc, char **argv)
 {
+	convert_volume_to_chunk_files("../data/campfire/tif-volume", 0);
+/*
 	benchmark::Initialize(&argc, argv);
 
 	global_test_data = create_continuous_walkthrough_data("../data/campfire/chunked-volume");
 	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(1);
 
 	benchmark::RunSpecifiedBenchmarks();
+*/
 }

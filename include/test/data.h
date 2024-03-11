@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <vector>
 
-#include "chunkloader/chunk_loader.h"
+#include "chunk_loader/chunk_loader.h"
 
 using ChunkCoordinates = std::vector<ChunkCoordinate>;
 
