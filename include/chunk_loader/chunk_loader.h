@@ -20,6 +20,11 @@ public:
 	virtual void
 	write(Chunks const& chunks) = 0;
 
+/*
+	virtual
+	load_layer(uint64_t z_level, int level_of_detail) = 0;
+*/
+
 	// additional:
 
 	// preload_all_chunks_by_coordinate_in

@@ -19,7 +19,7 @@ BM_fast_chunk_loader_without_preloading(benchmark::State& state)
 	{
 		for (int i = 0; i < global_test_data.chunks_to_load.size(); i++)
 		{
-			loader.load(global_test_data.chunks_to_load[i]);
+			loader.load(global_test_data.chunks_to_load[i], 1);
 			loader.drop(global_test_data.chunks_to_drop[i]);
 		}
 	}
@@ -28,13 +28,10 @@ BM_fast_chunk_loader_without_preloading(benchmark::State& state)
 int
 main(int argc, char **argv)
 {
-	convert_volume_to_chunk_files("../data/campfire/tif-volume", 0);
-/*
 	benchmark::Initialize(&argc, argv);
 
 	global_test_data = create_continuous_walkthrough_data("../data/campfire/chunked-volume");
 	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(1);
 
 	benchmark::RunSpecifiedBenchmarks();
-*/
 }

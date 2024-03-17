@@ -8,9 +8,9 @@
 #include "model/crop.h"
 
 void
-convert_volume_to_compressed_chunked_volume(std::filesystem::path volume_path, std::filesystem::path mask_path);
+convert_volume_to_compressed_chunked_volume(std::filesystem::path const& volume_directory, std::filesystem::path const& mask_path, uint64_t chunk_size, std::filesystem::path const& compressed_chunked_volume_path);
 
 void
-convert_volume_to_chunk_files(std::filesystem::path const& volume_directory, int64_t chunk_size);
+convert_volume_to_chunk_files(std::filesystem::path const& volume_directory, std::filesystem::path const& chunked_volume_path, int64_t chunk_size);
 
 #endif //VWTCHUNKLOADINGTESTINGANDBENCHING_VOLUMECONVERTER_VOLUMECONVERTER_H

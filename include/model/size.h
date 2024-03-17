@@ -16,6 +16,12 @@ struct Size2d
 struct Size3d
 {
 	uint64_t width, height, depth;
+
+	[[nodiscard]] uint64_t
+	volume() const
+	{
+		return depth * height * width;
+	}
 };
 
 #endif //VWTCHUNKLOADINGTESTINGANDBENCHING_SIZE_H
