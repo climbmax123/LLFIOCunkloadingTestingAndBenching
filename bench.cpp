@@ -44,7 +44,7 @@ main(int argc, char **argv)
 	benchmark::Initialize(&argc, argv);
 
 	global_test_data = create_continuous_walkthrough_data(created_chunked_volume);
-	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(1);
+	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(2);
 
 	benchmark::RunSpecifiedBenchmarks();
 }

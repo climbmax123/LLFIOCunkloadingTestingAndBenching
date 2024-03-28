@@ -89,7 +89,10 @@ convert_volume_to_compressed_chunked_volume(std::filesystem::path const& volume_
 	std::ofstream stream(compressed_chunked_volume_path / "volume.bin", std::ios::out | std::ios::binary);
 
 	if (!stream.is_open())
-	{ throw std::exception(); }
+	{
+		std::cout << "could not open compressed chunked volume file" << std::endl;
+		throw std::exception();
+	}
 
 	VolumeInformation volume_information = VolumeInformation::read_from_file(volume_directory / "meta.json");
 
@@ -417,7 +420,10 @@ convert_volume_to_chunk_files(std::filesystem::path const& volume_directory, std
 					stream(chunked_volume_path / file_name.str(), std::ios::out | std::ios::binary);
 
 				if (!stream.is_open())
-				{ throw std::exception(); }
+				{
+					std::cout << "could not open chunked file" << std::endl;
+					throw std::exception();
+				}
 
 				chunk_files::write_chunk_to_file(stream, coordinate, tif_files, chunk_size);
 			}

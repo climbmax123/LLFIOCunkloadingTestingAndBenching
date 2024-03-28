@@ -69,6 +69,7 @@ FastChunkLoader::load(ChunkCoordinates const& coordinates)
 
 	if (free_list.size() < not_found_coordinates.size())
 	{
+		std::cout << "not enough chunks in free list" << std::endl;
 		throw std::exception();
 	}
 
