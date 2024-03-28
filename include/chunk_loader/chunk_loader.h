@@ -5,6 +5,7 @@
 
 #include "model/chunk_coordinate.h"
 #include "model/chunk.h"
+#include "model/layer.h"
 
 class ChunkLoader
 {
@@ -20,10 +21,8 @@ public:
 	virtual void
 	write(Chunks const& chunks) = 0;
 
-/*
-	virtual
+	virtual Layer
 	load_layer(uint64_t z_level, int level_of_detail) = 0;
-*/
 
 	// additional:
 

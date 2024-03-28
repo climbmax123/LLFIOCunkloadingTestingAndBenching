@@ -66,6 +66,9 @@ public:
 	void
 	write(Chunks const& chunks) override;
 
+	Layer
+	load_layer(uint64_t z_level, int level_of_detail) override;
+
 	void
 	preload(ChunkCoordinates const& coordinates) override;
 

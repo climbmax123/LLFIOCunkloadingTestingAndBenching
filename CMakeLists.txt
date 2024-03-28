@@ -18,8 +18,7 @@ include_directories(${OpenSSL_INCLUDE_DIRS})
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "src/*.cpp")
 file(GLOB_RECURSE INCLUDE CONFIGURE_DEPENDS "include/*.h")
 
-add_executable(VWTChunkloadingTestingAndBenching bench.cpp ${SRC} ${INCLUDE}
-        include/model/mask.h)
+add_executable(VWTChunkloadingTestingAndBenching bench.cpp ${SRC} ${INCLUDE})
 target_include_directories(VWTChunkloadingTestingAndBenching PRIVATE include)
 
 target_link_libraries(VWTChunkloadingTestingAndBenching PUBLIC Threads::Threads benchmark::benchmark ${OpenCV_LIBS} llfio::hl)

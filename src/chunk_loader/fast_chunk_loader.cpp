@@ -34,7 +34,7 @@ FastChunkLoader::FastChunkLoader(std::filesystem::path const& chunked_volume_pat
 	extern llfio::mapped_file_handle mapped_file_handle;
 
 	mapped_file_handle = llfio::mapped_file({}, chunked_volume_path
-	                                            / "volume.chunk_pkg", llfio::file_handle::mode::write).value();
+	                                            / "volume.bin", llfio::file_handle::mode::write).value();
 
 	chunk_dimension.width  = info.chunk_size;
 	chunk_dimension.height = info.chunk_size;
@@ -205,6 +205,21 @@ uint64_t
 FastChunkLoader::flatten_coordinate(ChunkCoordinate coordinate) const
 {
 	return coordinate.z * chunk_count.y * chunk_count.x + coordinate.y * chunk_count.x + coordinate.x;
+}
+
+Layer
+FastChunkLoader::load_layer(uint64_t z_level, int level_of_detail)
+{
+	Layer layer;
+
+	layer.size = {
+		.width = this->chunk_count.x * this->chunk_dimension.width,
+		.height = this->chunk_count.y * this->chunk_dimension.height
+	};
+
+	// TODO load layer from chunks, with specific resolution
+
+	return layer;
 }
 
 // Function to convert uint16_t from big endian
