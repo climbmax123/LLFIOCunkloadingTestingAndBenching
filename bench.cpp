@@ -29,11 +29,21 @@ BM_fast_chunk_loader_without_preloading(benchmark::State& state)
 int
 main(int argc, char **argv)
 {
-	convert_volume_to_compressed_chunked_volume("../all-data/volume/scroll-1", "../data/volume/small-cleaned-masks", 64, "../data/chunked-volume/scroll-1");
+	/* NOTE(Lukas Karafiat):
+	     1. tif_volume needs to have *.tif pictures in the same sizes
+	     2. the masks should be *.png with corresponding amount of files as in the tif volumeF
+	     3. the tif volume needs correct meta information in a meta.json file
+	 */
+	fs::path tif_volume = "../data/volume/scroll-1";
+	fs::path masks_for_tif_volume = "../data/volume/small-cleaned-masks";
+	fs::path created_chunked_volume = "../data/chunked-volume/scroll-1";
+	uint64_t chunk_size = 64;
+
+	convert_volume_to_compressed_chunked_volume(tif_volume, masks_for_tif_volume, chunk_size, created_chunked_volume);
 
 	benchmark::Initialize(&argc, argv);
 
-	global_test_data = create_continuous_walkthrough_data( "../all-data/chunked-volume/scroll-1");
+	global_test_data = create_continuous_walkthrough_data(created_chunked_volume);
 	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(1);
 
 	benchmark::RunSpecifiedBenchmarks();
