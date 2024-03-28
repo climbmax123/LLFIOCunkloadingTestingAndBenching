@@ -86,6 +86,8 @@ write_chunk_to_stream(std::ofstream& stream, Chunk const& chunk);
 void
 convert_volume_to_compressed_chunked_volume(std::filesystem::path const& volume_directory, std::filesystem::path const& mask_path, uint64_t chunk_size, std::filesystem::path const& compressed_chunked_volume_path)
 {
+	// TODO(Lukas Karafiat): silently create the directory structure
+
 	std::ofstream stream(compressed_chunked_volume_path / "volume.bin", std::ios::out | std::ios::binary);
 
 	if (!stream.is_open())
@@ -101,8 +103,12 @@ convert_volume_to_compressed_chunked_volume(std::filesystem::path const& volume_
 	ChunkedVolumeInformation::write_to_file(chunked_volume_information,
 	                                        compressed_chunked_volume_path / "meta.json");
 
+	std::cout << "copied volume information" << std::endl;
+
 	std::vector<fs::path> mask_file_paths = get_all_mask_files(volume_information, mask_path);
 	std::ranges::sort(mask_file_paths);
+
+	std::cout << "found " << mask_file_paths.size() << " mask files" << std::endl;
 
 	Size3d chunk_count = {
 		volume_information.width / chunk_size,
@@ -113,8 +119,12 @@ convert_volume_to_compressed_chunked_volume(std::filesystem::path const& volume_
 	std::vector<bool> chunk_mask(chunk_count.volume());
 	chunk_mask = create_chunk_mask(chunk_mask, mask_file_paths, chunk_size);
 
+	std::cout << "created the chunk mask" << std::endl;
+
 	std::vector<uint64_t> chunk_map_indices(chunk_count.volume());
 	chunk_map_indices = create_chunk_map_indices(chunk_map_indices, chunk_mask);
+
+	std::cout << "created the chunk index map" << std::endl;
 
 	// write chunk_map_index to file
 	write_chunk_map_indices_to_stream(stream, chunk_map_indices);
@@ -140,7 +150,10 @@ convert_volume_to_compressed_chunked_volume(std::filesystem::path const& volume_
 			if (chunk_mask[z * chunk_count.height * chunk_count.width + i])
 			{ write_chunk_to_stream(stream, chunks[i]); }
 		}
+		std::cout << "written chunk data from " << z_index << " to " << (z_index + chunk_size) << std::endl;
 	}
+
+	std::cout << "written all chunk data" << std::endl;
 }
 
 void
@@ -206,6 +219,8 @@ create_chunk_mask(std::vector<bool>& chunk_mask, std::vector<fs::path> mask_file
 
 				chunk_mask[z * height * width + y * width + x] = are_all_mask_pixels_false(pixel_mask);
 			}
+
+			std::cout << "created chunk mask from layer " << z_index << " to layer " << (z_index + chunk_size) << std::endl;
 		}
 	}
 	return chunk_mask;
