@@ -219,9 +219,8 @@ create_chunk_mask(std::vector<bool>& chunk_mask, std::vector<fs::path> mask_file
 
 				chunk_mask[z * height * width + y * width + x] = are_all_mask_pixels_false(pixel_mask);
 			}
-
-			std::cout << "created chunk mask from layer " << z_index << " to layer " << (z_index + chunk_size) << std::endl;
 		}
+		std::cout << "created chunk mask from layer " << z_index << " to layer " << (z_index + chunk_size) << std::endl;
 	}
 	return chunk_mask;
 }
