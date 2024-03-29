@@ -14,7 +14,7 @@ template<typename LoaderType>
 static void
 BM_fast_chunk_loader_without_preloading(benchmark::State& state)
 {
-	LoaderType loader(global_test_data.volume_path, 16'000'000'000);
+	LoaderType loader(global_test_data.volume_path, 18'000'000'000);
 	// setup code
 	for (auto _: state)
 	{
@@ -34,10 +34,10 @@ main(int argc, char **argv)
 	     2. the masks should be *.png with corresponding amount of files as in the tif volumeF
 	     3. the tif volume needs correct meta information in a meta.json file
 	 */
-	fs::path tif_volume = "../data/volume/scroll-1";
-	fs::path masks_for_tif_volume = "../data/volume/small-cleaned-masks";
-	fs::path created_chunked_volume = "../data/chunked-volume/scroll-1";
-	uint64_t chunk_size = 64;
+	fs::path tif_volume = "../all-data/volume/scroll-1";
+	fs::path masks_for_tif_volume = "../all-data/volume/small-cleaned-masks";
+	fs::path created_chunked_volume = "../all-data/chunked-volume/scroll-1";
+	uint64_t chunk_size = 128;
 
 	convert_volume_to_compressed_chunked_volume(tif_volume, masks_for_tif_volume, chunk_size, created_chunked_volume);
 
