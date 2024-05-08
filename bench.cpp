@@ -34,17 +34,17 @@ main(int argc, char **argv)
 	     2. the masks should be *.png with corresponding amount of files as in the tif volumeF
 	     3. the tif volume needs correct meta information in a meta.json file
 	 */
-	fs::path tif_volume = "../all-data/volume/scroll-1";
-	fs::path masks_for_tif_volume = "../all-data/volume/small-cleaned-masks";
-	fs::path created_chunked_volume = "../all-data/chunked-volume/scroll-1";
+	fs::path tif_volume = "/home/christofer/chunkloader_test/tiffs";
+	fs::path masks_for_tif_volume = "/home/christofer/chunkloader_test/masks";
+	fs::path created_chunked_volume = "/home/christofer/chunkloader_test";
 	uint64_t chunk_size = 128;
 
-	convert_volume_to_compressed_chunked_volume(tif_volume, masks_for_tif_volume, chunk_size, created_chunked_volume);
+	//convert_volume_to_compressed_chunked_volume(tif_volume, masks_for_tif_volume, chunk_size, created_chunked_volume);
 
 	benchmark::Initialize(&argc, argv);
 
 	global_test_data = create_continuous_walkthrough_data(created_chunked_volume);
-	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(2);
+	BENCHMARK_TEMPLATE(BM_fast_chunk_loader_without_preloading, FastChunkLoader)->Iterations(4);
 
 	benchmark::RunSpecifiedBenchmarks();
 }

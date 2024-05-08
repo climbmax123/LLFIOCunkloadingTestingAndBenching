@@ -11,6 +11,8 @@
 #include <filesystem>
 #include <algorithm>
 #include <iostream>
+#include <vector>
+
 #include "util/volume_information.h"
 #include "model/size.h"
 

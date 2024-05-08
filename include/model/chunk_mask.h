@@ -7,6 +7,7 @@
 #include <iostream>
 #include "util/volume_information.h"
 #include "model/size.h"
+#include <vector>
 
 namespace fs = std::filesystem;
 
