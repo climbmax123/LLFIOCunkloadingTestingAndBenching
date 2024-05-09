@@ -29,7 +29,7 @@ create_continuous_walkthrough_data(fs::path const& volume_path)
 		for (int64_t y = 0; y < max_y; y++)
 		{
 			for (int64_t x = 0; x < max_x; x++)
-			{ coordinates.emplace_back(x, y, z); }
+			{ coordinates.emplace_back(z, y, x); }
 		}
 
 		test_data.chunks_to_preload.push_back(coordinates);

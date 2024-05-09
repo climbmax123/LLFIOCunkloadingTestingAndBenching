@@ -9,31 +9,22 @@
 #include <filesystem>
 
 #include "util/chunked_volume_information.h"
+#include "model/crop.h"
 
 class FastChunkLoader : public ChunkLoader
 {
 private:
 	using ChunkMemory = std::span<uint16_t>;
 
-	struct ChunkCount
-	{
-		uint64_t x, y, z;
-	};
-
-	struct ChunkDimension
-	{
-		uint64_t width, height, depth;
-	};
-
 	ChunkedVolumeInformation info;
+
+	Size3d chunk_count;
+	Size3d chunk_size;
 
 	std::vector<uint16_t> memory_pool;
 
 	std::vector<ChunkMemory>               free_list;
 	std::map<ChunkCoordinate, ChunkMemory> occupied_list;
-
-	ChunkCount     chunk_count;
-	ChunkDimension chunk_dimension;
 
 	std::vector<uint64_t> chunk_indices;
 
@@ -52,8 +43,11 @@ private:
 	void
 	write_chunk_to_file(ChunkCoordinate coordinate, ChunkMemory const& memory) const;
 
-	uint64_t
+	[[nodiscard]] uint64_t
 	flatten_coordinate(ChunkCoordinate coordinate) const;
+
+	static void
+	copy_chunk_layer_to_layer_crop(std::span<uint16_t> const& chunk_layer, Layer& layer, Crop2d crop);
 
 public:
 	explicit FastChunkLoader(std::filesystem::path const& chunked_volume_path, uint64_t maximum_memory_consumption);

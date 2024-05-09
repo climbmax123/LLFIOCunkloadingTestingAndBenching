@@ -1,63 +1,46 @@
-#ifndef VWTCHUNKLOADINGTESTINGANDBENCHING_SIZE_H
-#define VWTCHUNKLOADINGTESTINGANDBENCHING_SIZE_H
+#ifndef VWTCHUNKLOADINGTESTINGANDBENCHING_MODEL_SIZE_H
+#define VWTCHUNKLOADINGTESTINGANDBENCHING_MODEL_SIZE_H
 
 #include <cstdint>
 #include <string>
-#include <sstream>
 
 struct Size1d
 {
-	uint64_t width;
+	uint64_t length;
 
-	[[nodiscard]] std::string to_string() const {
-		std::stringstream ss;
-		ss << "Size1d" << std::endl;
-		ss << "{" << std::endl;
-		ss << "\t" << "width:  " << width << std::endl;
-		ss << "};";
-	}
+	[[nodiscard]] std::string
+	to_string() const;
 };
 
 struct Size2d
 {
-	uint64_t width, height;
+	uint64_t height, width;
 
 	[[nodiscard]] uint64_t
-	area() const
-	{
-		return height * width;
-	}
+	area() const;
 
-	[[nodiscard]] std::string to_string() const {
-		std::stringstream ss;
-		ss << "Size2d" << std::endl;
-		ss << "{" << std::endl;
-		ss << "\t" << "width:  " << width << std::endl;
-		ss << "\t" << "height: " << height << std::endl;
-		ss << "};";
-	}
+	[[nodiscard]] std::string
+	to_string() const;
 };
 
 struct Size3d
 {
-	uint64_t width, height, depth;
+	uint64_t depth, height, width;
 
 	[[nodiscard]] uint64_t
-	volume() const
-	{
-		return depth * height * width;
-	}
+	volume() const;
 
-	[[nodiscard]] std::string to_string() const {
-		std::stringstream ss;
-		ss << "Size3d" << std::endl;
-		ss << "{" << std::endl;
-		ss << "\t" << "width:  " << width << std::endl;
-		ss << "\t" << "height: " << height << std::endl;
-		ss << "\t" << "depth:  " << depth << std::endl;
-		ss << "};";
-		return ss.str();
-	}
+	[[nodiscard]] uint64_t
+	area_top() const;
+
+	[[nodiscard]] uint64_t
+	area_side() const;
+
+	[[nodiscard]] uint64_t
+	area_front() const;
+
+	[[nodiscard]] std::string
+	to_string() const;
 };
 
-#endif //VWTCHUNKLOADINGTESTINGANDBENCHING_SIZE_H
+#endif //VWTCHUNKLOADINGTESTINGANDBENCHING_MODEL_SIZE_H

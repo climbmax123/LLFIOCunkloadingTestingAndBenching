@@ -2,8 +2,7 @@
 
 #include <span>
 #include <opencv2/core/mat.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include "model/mask.h"
+#include "model/mask_file.h"
 #include "model/crop.h"
 
 
@@ -12,16 +11,12 @@ std::vector<fs::path>
 get_all_mask_files(VolumeInformation const& volume_info, fs::path const& mask_volume_directory);
 
 static
-std::vector<Mask>
+std::vector<MaskFile>
 open_mask_files(std::span<fs::path> const& mask_file_paths);
 
 static
-Mask
-open_mask_file(fs::path const& path);
-
-static
 std::vector<bool>
-write_mask_crop_to_vector(std::vector<bool>& mask_chunk, Crop2d crop, std::vector<Mask> const& masks);
+write_mask_crop_to_vector(std::vector<bool>& mask_chunk, Crop2d crop, std::vector<MaskFile> const& masks);
 
 static
 bool
@@ -30,9 +25,9 @@ are_all_mask_pixels_false(std::vector<bool> const& mask_pixels);
 ChunkMask::ChunkMask(VolumeInformation const& volume_information, fs::path const& mask_path, uint64_t chunk_size)
 {
 	size = {
-		.width  = volume_information.width / chunk_size,
+		.depth  = volume_information.slices / chunk_size,
 		.height = volume_information.height / chunk_size,
-		.depth  = volume_information.slices / chunk_size
+		.width  = volume_information.width / chunk_size
 	};
 
 	data = std::vector<bool>(size.volume());
@@ -51,24 +46,23 @@ ChunkMask::fill_chunk_mask(const VolumeInformation& volume_information, const fs
 
 	for (uint64_t z = 0; z < size.depth; z++)
 	{
-		uint64_t index_z = z * chunk_size;
+		auto index_z = static_cast<int64_t>(z * chunk_size);
 
-		std::span<fs::path> mask_file_path_span = {mask_file_paths.begin() + index_z, chunk_size};
+		std::vector<MaskFile> masks = open_mask_files({mask_file_paths.begin() + index_z, chunk_size});
 
-		std::vector<Mask> masks = open_mask_files(mask_file_path_span);
-
-		for (uint64_t y = 0; y < size.height; y++)
+		for (int64_t y = 0; y < size.height; y++)
 		{
-			uint64_t index_y = y * chunk_size;
+			auto index_y = static_cast<int64_t>(y * chunk_size);
 
-			for (uint64_t x = 0; x < size.width; x++)
+			for (int64_t x = 0; x < size.width; x++)
 			{
-				uint64_t index_x = x * chunk_size;
-				Crop2d   crop    = {.position={index_x, index_y}, .size={chunk_size, chunk_size}};
+				auto index_x = static_cast<int64_t>(x * chunk_size);
+
+				Crop2d crop = {.position={index_y, index_x}, .size={chunk_size, chunk_size}};
 
 				pixel_mask = write_mask_crop_to_vector(pixel_mask, crop, masks);
 
-				set_pixel_at(z, y, x, are_all_mask_pixels_false(pixel_mask));
+				set_pixel_at(z, y, x, !are_all_mask_pixels_false(pixel_mask));
 			}
 		}
 		std::cout << "created chunk mask from layer " << index_z << " to layer " << (index_z + chunk_size)
@@ -91,50 +85,32 @@ get_all_mask_files(VolumeInformation const& volume_info, fs::path const& mask_vo
 	return files;
 }
 
-std::vector<Mask>
+std::vector<MaskFile>
 open_mask_files(std::span<fs::path> const& mask_file_paths)
 {
-	std::vector<Mask> masks;
+	std::vector<MaskFile> masks;
 
 	for (fs::path const& mask_file_path: mask_file_paths)
-	{ masks.emplace_back(open_mask_file(mask_file_path)); }
+	{ masks.emplace_back(MaskFile::read_from_image_file(mask_file_path)); }
 
 	return masks;
 }
 
-Mask
-open_mask_file(fs::path const& path)
-{
-	cv::Mat image = cv::imread(path, cv::IMREAD_UNCHANGED);
-
-	uint64_t height = image.size[0];
-	uint64_t width  = image.size[1];
-
-	Mask mask = {width, height, std::vector<bool>(width * height)};
-
-	for (uint64_t index = 0, y = 0; y < height; y++)
-	{
-		for (uint64_t x = 0; x < width; x++, index++)
-		{ mask.data[index] = 0 < image.at<uint16_t>(y, x); }
-	}
-
-	return mask;
-}
-
 std::vector<bool>
-write_mask_crop_to_vector(std::vector<bool>& mask_chunk, Crop2d crop, std::vector<Mask> const& masks)
+write_mask_crop_to_vector(std::vector<bool>& mask_chunk, Crop2d crop, std::vector<MaskFile> const& masks)
 {
-	for (uint64_t z = 0; z < masks.size(); z++)
+	for (int64_t z = 0; z < masks.size(); z++)
 	{
-		for (uint64_t index_y = crop.position.y, y = 0; index_y < crop.size.height; index_y++, y++)
+		for (int64_t y = 0; y < crop.size.height; y++)
 		{
-			for (uint64_t index_x = crop.position.x, x = 0; index_x < crop.size.width; index_x++, x++)
+			for (int64_t x = 0; x < crop.size.width; x++)
 			{
 				mask_chunk[z * crop.size.area() + y * crop.size.width + x]
-					= masks[z].data[index_y * masks[z].width + index_x];
+					= masks[z].at({crop.position.y + y, crop.position.x + x});
 			}
 		}
 	}
+
 	return mask_chunk;
 }
 

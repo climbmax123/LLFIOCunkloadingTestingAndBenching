@@ -7,6 +7,7 @@
 #include "util/chunked_volume_information.h"
 #include "model/chunk_mask.h"
 #include "model/chunk_map_indices.h"
+#include "log/debug/visualizer.h"
 #include <opencv2/opencv.hpp>
 #include <fstream>
 
@@ -44,7 +45,7 @@ write_chunks_to_stream(std::ofstream& stream, ChunkedVolumeInformation const& vo
 
 static
 std::vector<fs::path>
-get_all_tif_files(ChunkedVolumeInformation const& volume_info, fs::path const& tif_volume_directory);
+get_all_tif_file_paths(ChunkedVolumeInformation const& volume_info, fs::path const& tif_volume_directory);
 
 using ChunkMemory = std::vector<uint16_t>;
 
@@ -53,20 +54,16 @@ std::vector<TifFile>
 open_tif_files(std::span<fs::path> const& tif_file_paths);
 
 static
-TifFile
-open_tif_file(fs::path const& path);
+void
+write_tif_files_to_chunks(std::vector<ChunkMemory>& chunks, std::vector<TifFile> const& tif_files, Size3d chunk_size);
 
 static
 void
-write_tif_files_to_chunks(std::vector<ChunkMemory>& chunks, std::vector<TifFile> const& tif_files, uint64_t chunk_size);
+write_tif_file_to_chunks(std::vector<ChunkMemory>& chunks, TifFile const& tif_file, Size3d chunk_size, int64_t depth);
 
 static
 void
-write_tif_file_to_chunks(std::vector<ChunkMemory>& chunks, TifFile const& tif_file, uint64_t chunk_size, uint64_t depth);
-
-static
-void
-write_tif_crop_to_chunk(ChunkMemory& chunk, TifFile const& tif_file, Crop2d crop, uint64_t depth);
+write_tif_crop_to_chunk(ChunkMemory& chunk, TifFile const& tif_file, Crop2d crop, int64_t depth);
 
 static
 void
@@ -108,6 +105,8 @@ convert_volume_to_compressed_chunked_volume(fs::path const& volume_path, fs::pat
 
 	write_chunks_to_stream(stream, chunked_volume_information, volume_path, chunk_mask);
 	std::cout << "written all chunks" << std::endl;
+	stream.flush();
+	stream.close();
 }
 
 void
@@ -123,29 +122,31 @@ write_chunk_map_indices_to_stream(std::ofstream& stream, ChunkMapIndices const& 
 void
 write_chunks_to_stream(std::ofstream& stream, ChunkedVolumeInformation const& volume_information, fs::path const& volume_path, ChunkMask const& chunk_mask)
 {
-	std::vector<fs::path> tif_file_paths = get_all_tif_files(volume_information, volume_path);
+	std::vector<fs::path> tif_file_paths = get_all_tif_file_paths(volume_information, volume_path);
 	std::ranges::sort(tif_file_paths);
 
-	uint64_t chunk_size = volume_information.chunk_size;
+	Size3d chunk_size = {
+		.depth  = volume_information.chunk_size,
+		.height = volume_information.chunk_size,
+		.width  = volume_information.chunk_size
+	};
 
 	Size3d chunk_count = {
-		.width  = volume_information.width / chunk_size,
-		.height = volume_information.height / chunk_size,
-		.depth  = volume_information.slices / chunk_size
+		.depth  = volume_information.slices / chunk_size.depth,
+		.height = volume_information.height / chunk_size.height,
+		.width  = volume_information.width / chunk_size.width
 	};
 
 	std::vector<ChunkMemory> chunks = {
-		chunk_count.width * chunk_count.height,
-		ChunkMemory(chunk_size * chunk_size * chunk_size)
+		chunk_count.area_top(),
+		ChunkMemory(chunk_size.volume())
 	};
 
-	for (uint64_t z = 0; z < chunk_count.depth; z++)
+	for (int64_t z = 0; z < chunk_count.depth; z++)
 	{
-		uint64_t index_z = z * chunk_size;
+		auto index_z = static_cast<int64_t>(z * chunk_size.depth);
 
-		std::span<fs::path> tif_file_path_span = {tif_file_paths.begin() + index_z, chunk_size};
-
-		std::vector<TifFile> tif_files = open_tif_files(tif_file_path_span);
+		std::vector<TifFile> tif_files = open_tif_files({tif_file_paths.begin() + index_z, chunk_size.depth});
 
 		write_tif_files_to_chunks(chunks, tif_files, chunk_size);
 
@@ -154,12 +155,13 @@ write_chunks_to_stream(std::ofstream& stream, ChunkedVolumeInformation const& vo
 			if (chunk_mask.at(z, i / chunk_count.width, i % chunk_count.width))
 			{ write_chunk_to_stream(stream, chunks[i]); }
 		}
-		std::cout << "written chunk data from " << index_z << " to " << (index_z + chunk_size) << std::endl;
+		std::cout << "written chunk data from " << index_z << " to " << (index_z + chunk_size.depth)
+		          << std::endl;
 	}
 }
 
 std::vector<fs::path>
-get_all_tif_files(ChunkedVolumeInformation const& volume_info, fs::path const& tif_volume_directory)
+get_all_tif_file_paths(ChunkedVolumeInformation const& volume_info, fs::path const& tif_volume_directory)
 {
 	std::vector<fs::path> files;
 	files.reserve(volume_info.slices);
@@ -179,72 +181,60 @@ open_tif_files(std::span<fs::path> const& tif_file_paths)
 	std::vector<TifFile> tif_files;
 
 	for (fs::path const& tif_file_path: tif_file_paths)
-	{ tif_files.push_back(open_tif_file(tif_file_path)); }
+	{ tif_files.push_back(TifFile::read_from_image_file(tif_file_path)); }
 
 	return tif_files;
 }
 
-TifFile
-open_tif_file(fs::path const& path)
-{
-	cv::Mat image = cv::imread(path, cv::IMREAD_UNCHANGED);
-
-	uint64_t height = image.size[0];
-	uint64_t width  = image.size[1];
-
-	TifFile tif_file = {width, height, std::vector<uint16_t>(width * height)};
-
-	for (uint64_t index = 0, y = 0; y < height; y++)
-	{
-		for (uint64_t x = 0; x < width; x++, index++)
-		{ tif_file.data[index] = image.at<uint16_t>(y, x); }
-	}
-
-	return tif_file;
-}
-
 void
-write_tif_files_to_chunks(std::vector<ChunkMemory>& chunks, std::vector<TifFile> const& tif_files, uint64_t chunk_size)
+write_tif_files_to_chunks(std::vector<ChunkMemory>& chunks, std::vector<TifFile> const& tif_files, Size3d chunk_size)
 {
-	assert(tif_files.size() == chunk_size && "count of tif files is not equal to chunk size");
+	assert(tif_files.size() == chunk_size.depth && "count of tif files is not equal to chunk size");
 
 	Size2d chunk_count = {
-		.width  = tif_files[0].width / chunk_size,
-		.height = tif_files[0].height / chunk_size
+		.height = tif_files[0].size.height / chunk_size.height,
+		.width  = tif_files[0].size.width / chunk_size.width
 	};
 
-	assert(chunk_count.area() == chunks.size() && "");
+	assert(chunk_count.area() == chunks.size() && "chunk count and reserved buffer have not same size");
 
 	// fill in data
-	for (uint64_t depth = 0; depth < tif_files.size(); depth++)
+	for (int64_t depth = 0; depth < tif_files.size(); depth++)
 	{ write_tif_file_to_chunks(chunks, tif_files[depth], chunk_size, depth); }
 }
 
 void
-write_tif_file_to_chunks(std::vector<ChunkMemory>& chunks, TifFile const& tif_file, uint64_t chunk_size, uint64_t depth)
+write_tif_file_to_chunks(std::vector<ChunkMemory>& chunks, TifFile const& tif_file, Size3d chunk_size, int64_t depth)
 {
-	Size2d chunk_count = {.width = tif_file.height / chunk_size, .height = tif_file.width / chunk_size};
+	Size2d chunk_count = {
+		.height = tif_file.size.width / chunk_size.depth,
+		.width = tif_file.size.height / chunk_size.height
+	};
 
-	for (uint64_t y = 0; y < chunk_count.height; y++)
+	for (int64_t y = 0; y < chunk_count.height; y++)
 	{
-		for (uint64_t x = 0; x < chunk_count.width; x++)
+		for (int64_t x = 0; x < chunk_count.width; x++)
 		{
-			Crop2d crop = {.position={x * chunk_size, y * chunk_size}, .size={chunk_size, chunk_size}};
+			Crop2d crop = {
+				.position={
+					.y = static_cast<int64_t>(y * chunk_size.height),
+					.x = static_cast<int64_t>(x * chunk_size.width)
+				},
+				.size={chunk_size.height, chunk_size.width}};
 			write_tif_crop_to_chunk(chunks[y * chunk_count.width + x], tif_file, crop, depth);
-
 		}
 	}
 }
 
 void
-write_tif_crop_to_chunk(ChunkMemory& chunk, TifFile const& tif_file, Crop2d crop, uint64_t depth)
+write_tif_crop_to_chunk(ChunkMemory& chunk, TifFile const& tif_file, Crop2d crop, int64_t depth)
 {
-	uint64_t index = depth * crop.size.height * crop.size.width;
+	auto index = static_cast<int64_t>(depth * crop.size.height * crop.size.width);
 
-	for (uint64_t y = crop.position.y; y < crop.position.y + crop.size.height; y++)
+	for (int64_t y = crop.position.y; y < crop.position.y + crop.size.height; y++)
 	{
-		for (uint64_t x = crop.position.x; x < crop.position.x + crop.size.width; x++, index++)
-		{ chunk[index] = tif_file.data[y * tif_file.width + x]; }
+		for (int64_t x = crop.position.x; x < crop.position.x + crop.size.width; x++, index++)
+		{ chunk[index] = tif_file.at({y, x}); }
 	}
 }
 
@@ -261,34 +251,43 @@ write_chunk_to_stream(std::ofstream& stream, ChunkMemory const& chunk)
 namespace chunk_files
 {
 	void
-	write_chunk_to_file(std::ofstream& stream, ChunkCoordinate coordinate, std::vector<TifFile> const& tif_files, int64_t chunk_size);
+	write_chunk_to_file(std::ofstream& stream, std::vector<TifFile> const& tif_files, int64_t chunk_size);
 }
 
 void
-convert_volume_to_chunk_files(std::filesystem::path const& volume_directory, std::filesystem::path const& chunked_volume_path, int64_t chunk_size)
+convert_volume_to_chunk_files(std::filesystem::path const& volume_directory, std::filesystem::path const& chunked_volume_path, uint64_t chunk_size)
 {
 	VolumeInformation volume_information = VolumeInformation::read_from_file(volume_directory / "meta.json");
 
-	ChunkedVolumeInformation chunked_volume_information
-		                         = ChunkedVolumeInformation::from_volume_information(volume_information, chunk_size);
-	ChunkedVolumeInformation::write_to_file(chunked_volume_information,
-	                                        chunked_volume_path / "meta.json");
+	ChunkedVolumeInformation chunked_volume_information;
 
-	std::vector<fs::path> tif_file_paths = get_all_tif_files(chunked_volume_information, volume_directory);
+	// copy the volume information
+	{
+		using CVI = ChunkedVolumeInformation;
+		chunked_volume_information = CVI::from_volume_information(volume_information, chunk_size);
+		CVI::write_to_file(chunked_volume_information, chunked_volume_path / "meta.json");
+	}
+
+	std::vector<fs::path> tif_file_paths = get_all_tif_file_paths(chunked_volume_information, volume_directory);
 	std::ranges::sort(tif_file_paths);
 
-	// chunks in z direction
-	for (int64_t z = 0; z + chunk_size < volume_information.slices; z += chunk_size)
-	{
-		std::vector<TifFile> tif_files = open_tif_files(std::span(tif_file_paths.begin() + z, chunk_size));
+	Size3d chunk_count = {
+		.depth  = volume_information.slices / chunk_size,
+		.height = volume_information.height / chunk_size,
+		.width  = volume_information.width / chunk_size,
+	};
 
-		// chunks in y direction
-		for (int64_t y = 0; y + chunk_size < volume_information.height; y += chunk_size)
+	for (int64_t z = 0; z < chunk_count.depth; z++)
+	{
+		auto index_z = static_cast<int64_t>(z * chunk_size);
+
+		std::vector<TifFile> tif_files = open_tif_files({tif_file_paths.begin() + index_z, chunk_size});
+
+		for (int64_t y = 0; y < chunk_count.height; y++)
 		{
-			// chunks in x direction
-			for (int64_t x = 0; x + chunk_size < volume_information.width; x += chunk_size)
+			for (int64_t x = 0; x < chunk_count.width; x++)
 			{
-				ChunkCoordinate coordinate = {.x=x / chunk_size, .y=y / chunk_size, .z=z / chunk_size};
+				ChunkCoordinate coordinate = {.z=z, .y=y, .x=x};
 
 				std::stringstream file_name;
 				file_name << std::setfill('0') << std::setw(4) << coordinate.z << "_";
@@ -305,14 +304,14 @@ convert_volume_to_chunk_files(std::filesystem::path const& volume_directory, std
 					throw std::exception();
 				}
 
-				chunk_files::write_chunk_to_file(stream, coordinate, tif_files, chunk_size);
+				chunk_files::write_chunk_to_file(stream, tif_files, chunk_size);
 			}
 		}
 	}
 }
 
 void
-chunk_files::write_chunk_to_file(std::ofstream& stream, ChunkCoordinate coordinate, std::vector<TifFile> const& tif_files, int64_t chunk_size)
+chunk_files::write_chunk_to_file(std::ofstream& stream, std::vector<TifFile> const& tif_files, int64_t chunk_size)
 {
 	for (int64_t z = 0; z < chunk_size; z++)
 	{
@@ -320,10 +319,7 @@ chunk_files::write_chunk_to_file(std::ofstream& stream, ChunkCoordinate coordina
 		{
 			for (int64_t x = 0; x < chunk_size; x++)
 			{
-				uint64_t xy_index = (coordinate.y * chunk_size + y) * tif_files[0].width
-				                    + coordinate.x * chunk_size + x;
-
-				uint16_t converted_value = htobe16(tif_files[z].data[xy_index]);
+				uint16_t converted_value = htobe16(tif_files[z].at({y, x}));
 				stream.write(reinterpret_cast<const char *>(&converted_value), sizeof(uint16_t));
 			}
 		}

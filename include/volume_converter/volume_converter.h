@@ -3,7 +3,7 @@
 
 #include <filesystem>
 #include "model/chunk.h"
-#include "model/mask.h"
+#include "model/mask_file.h"
 #include "model/tif_file.h"
 #include "model/crop.h"
 

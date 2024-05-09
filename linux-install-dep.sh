@@ -42,3 +42,13 @@ make -j16 -DLLFIO_HEADERS_ONLY=0 -DLLFIO_DYN_LINK
 sudo make install
 cd ..
 cd ../..
+
+cd lib/Open3d || exit 1
+./util/install_deps_ubuntu.sh
+mkdir build
+cd build || exit 1
+cmake -DBUILD_SHARED_LIBS=ON ..
+make -j16
+sudo make install
+cd ..
+cd ../..
